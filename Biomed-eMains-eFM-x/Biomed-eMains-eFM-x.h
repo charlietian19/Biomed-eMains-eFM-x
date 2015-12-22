@@ -5,6 +5,7 @@
 #define USE_CALLBACK
 
 using namespace System;
+using namespace System::Threading;
 using namespace System::Collections::Generic;
 using namespace System;
 
@@ -44,31 +45,66 @@ namespace Biomed_eMains_eFMx {
 	typedef DWORD(__cdecl* READ_OFFSETS)(DWORD __in serial, double __out *values);
 
 
-	/* Functions receiving callbacks and wrapping the data into managed arrays. */
+	/* Functions receiving callbacks and wrapping the data into managed arrays. Called every time new data arrives. */
 	void __cdecl SensorCallbackFunction(DWORD serial, double *values, DWORD datalength, BYTE packetCounter);
+
+	/* Splits the raw data in the buffer on three channels and puts them into the corresponding managed arrays.
+	The data is converted to uT according to the sensor calibration. */
 	static void ParseData(double *buf, DWORD dataCount, array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
 
 	public ref class eMains
 	{
 	public:
-		delegate void DataProcessingFunc(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples);
+		/* Returns a eMains object given a serial. */
 		eMains(int serial);
+
+		/* Locates and loads eFM-x API.dll. Must be called before any instances can be constructed.
+		Should only be called once. */
 		static int LoadDLL();
+
+		/* Returns an array of available magnetometer serials, or an empty array if none are available. */
 		static List<int>^ GetAvailableSerials();
-		int DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);
-		int DAQStart(bool convertToMicroTesla);
-		int DAQStop();
-		static void ShowErrorInformation(int error);
-		int SetUserCalc(bool convert);
-		bool GetUserCalc();
-		String^ GetType();
-		char GetRevision();
-		int GetSerial();
 
-
+		/* Invokes a data handler event if one is register. The purpose of this function is to dispatch the
+		received data to the corecct object. A native function has to invoke it so it's public. */
 		static void InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
 			array<double>^ dataZ, double microsecondsSinceLastData, DateTime^ time, int samples);
+
+		/* Describes a user function to be called when the data arrives. */
+		delegate void DataProcessingFunc(array<double>^ dataX, array<double>^ dataY,
+			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples);
+		
+		/* Initializes the DAQ SamplingRate and chop&clamp parameters. */
+		int DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);
+
+		/* Starts the data acquisition. 
+		If compiled with polling option, creates a new thread that will call processingFunction 
+		each time non-zero number of samples arrives. If compiled with callback option, registers
+		a callback with the DLL that calls processingFunction each time the data arrives.
+		convertToMicrotesla - if True, the returned values are in uT, otherwise it's DAC voltage. */
+		int DAQStart(bool convertToMicroTesla);
+
+		/* Stops the data acquisition.*/
+		int DAQStop();
+
+		/* Displays a message box explaining the error code. This call is NOT thread safe. */
+		static void ShowErrorInformation(int error);
+
+		/* Sets whether the device sends the data in DAC voltage units, or in magnetic field units
+		(according to the internal calibration data) */
+		int SetUserCalc(bool convert);
+
+		/* Returns whether the device sends the data in DAC voltage units, or in magnetic field units	*/
+		bool GetUserCalc();
+
+		/* Returns the device type string. */
+		String^ GetType();
+
+		/* Returns the device ADC revision. */
+		char GetRevision();
+
+		/* Returns the device serial. */
+		int GetSerial();
 
 		// These functions and fields will be private and instance in future releases
 		// in order to support multiple sensors per program.
@@ -89,22 +125,38 @@ namespace Biomed_eMains_eFMx {
 #else
 	private:
 #endif
-
-	/* Private instance fields. */
+		/* Flags retreived by ReagKennung */
 		bool flag1, UserCalc;
+
+		/* ADC revision. */
 		char Revision;
+
+		/* Sensor type string. */
 		String^ type;
 
-	/* Private instance methods. */
+		/* Reads out X, Y, Z slopes from the calibration data and saves them in the object. */
 		int InitializeSlopes();
+
+		/* Reads out X, Y, Z offsets from the calibration data and saves them in the object. */
 		int InitializeOffsets();
+
+		/* Reads out the device information and saves it in the object. */
 		int InitializeStatus();
 
+		/* Polls the data from the sensor (backup solution if callbacks are still not ready when
+		the delivery is scheduled). Timestamps the data, splits it in three channels and calls
+		dataProcessingFunction when the data has arrived. */
 		void SensorPollingFunction();
+
+		/* Indicates whether this instance is reading out the data from the sensor. */
 		bool isReading = false;
+
+		/* Serial that this instance was created with. */
 		DWORD serial;
 
 	/* Function entry points extracted from the device library. */
+		/* Lock synchronizing the DLL calls. */
+		static Mutex^ DLLMutex = gcnew Mutex();
 		static HINSTANCE eMainsDLL = NULL;
 		static GET_NUMBER_OF_DEVICES _GetNumberOfDevices = NULL;
 		static GET_REVISION _GetRevision = NULL;
