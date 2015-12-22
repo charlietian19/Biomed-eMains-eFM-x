@@ -9,23 +9,45 @@ using namespace Biomed_eMains_eFMx;
 
 namespace BiomedeMainseFMxtest
 {
-	/* Stub for ReadSlopes eFM-x API.dll function. */
+	static double slope = 1.0;
+	static double offset = 0.0;
+	static int serialMult = 11;
+	static int deviceNumber = 3;
+
+	/* Stubs for eFM-x API.dll functions. */
 	DWORD __cdecl ReadSlopesStub(DWORD __in serial, double __out *values)
 	{
-		values[0] = 1.0;
-		values[1] = 1.0;
-		values[2] = 1.0;
+		for (int i = 0; i < 3; i++)
+		{
+			values[i] = slope;
+		}
 		return 0;
 	}
 
-	/* Stub for ReadOffsets eFM-x API.dll function. */
 	DWORD __cdecl ReadOffsetsStub(DWORD __in serial, double __out *values)
 	{
-		values[0] = 0.0;
-		values[1] = 0.0;
-		values[2] = 0.0;
+		for (int i = 0; i < 3; i++)
+		{
+			values[i] = offset;
+		}
 		return 0;
 	}
+
+	DWORD __cdecl GetAvailableSerialsStub(DWORD* __out buf, __in DWORD len)
+	{
+		for (unsigned int i = 0; i < len; i++)
+		{
+			buf[i] = serialMult * i;
+		}
+		return 0;
+	};
+
+	DWORD __cdecl GetNumberOfDevicesStub(DWORD* __out num)
+	{
+		*num = deviceNumber;
+		return 0;
+	}
+
 
 	[TestClass]
 	public ref class UnitTest
@@ -35,8 +57,7 @@ namespace BiomedeMainseFMxtest
 
 	public: 
 		/// <summary>
-		///Gets or sets the test context which provides
-		///information about and functionality for the current test run.
+		///Tests the functions of the unmanaged code wrapper library
 		///</summary>
 		property Microsoft::VisualStudio::TestTools::UnitTesting::TestContext^ TestContext
 		{
@@ -51,35 +72,35 @@ namespace BiomedeMainseFMxtest
 		};
 
 		#pragma region Additional test attributes
-		//
-		//You can use the following additional attributes as you write your tests:
-		//
-		//Use ClassInitialize to run code before running the first test in the class
 		[ClassInitialize()]
 		static void MyClassInitialize(Microsoft::VisualStudio::TestTools::UnitTesting::TestContext^ testContext) {
 			eMains::_ReadSlopes = ReadSlopesStub;
 			eMains::_ReadOffsets = ReadOffsetsStub;
 		};
 		
-		//Use ClassCleanup to run code after all tests in a class have run
-		//[ClassCleanup()]
-		//static void MyClassCleanup() {};
-		//
-		//Use TestInitialize to run code before running each test
-		//[TestInitialize()]
-		//void MyTestInitialize() {};
-		//
-		//Use TestCleanup to run code after each test has run
-		//[TestCleanup()]
-		//void MyTestCleanup() {};
-		//
 		#pragma endregion 
 
 		[TestMethod]
-		void TestCreateNew()
+		/* Checks if the new eMains object is created correctly without eFM-x API.dll */
+		void CreateNewSensor()
 		{
 			eMains^ sensor = gcnew eMains(123);
-			Assert::AreEqual<Int32>(sensor->serial, 123);
+			Assert::AreEqual<Int32>(123, sensor->serial);
+		};
+
+		[TestMethod]
+		/* Checks if the list of devices is retrieved correctly. */
+		void GetDeviceList()
+		{
+			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
+			eMains::_GetNumberOfDevices = GetNumberOfDevicesStub;
+
+			List<int>^ serials = eMains::GetAvailableSerials();
+			Assert::AreEqual(deviceNumber, serials->Count);
+			for (int i = 1; i < deviceNumber; i++)
+			{
+				Assert::AreEqual(i * serialMult, serials[i]);
+			}
 		};
 	};
 }
