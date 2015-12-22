@@ -11,7 +11,7 @@ using namespace System::Diagnostics;
 using namespace Biomed_eMains_eFMx;
 
 /* Non-managed callback for the DLL. Called every time new data arrives. */
-void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(double *values, DWORD datalength, BYTE packetCounter) {
+void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *values, DWORD datalength, BYTE packetCounter) {
 	static __int64 systemTicks = 0;
 
 	systemTicks = Stopwatch::GetTimestamp();
@@ -111,9 +111,9 @@ int Biomed_eMains_eFMx::eMains::InitializeStatus()
 	int error = _ReadKennung(serial, (BYTE *)&kennung);
 	if (!error)
 	{
+		flag1 = !!kennung.flag1;
+		UserCalc = !!kennung.flag2;
 		type = gcnew String(kennung.deviceType, 0, 4);
-		flag1 = kennung.flag1;
-		UserCalc = kennung.flag2;
 	}
 	else
 	{
@@ -278,7 +278,7 @@ int Biomed_eMains_eFMx::eMains::SetUserCalc(bool convert)
 */
 bool Biomed_eMains_eFMx::eMains::GetUserCalc()
 {
-	return UserCalc != 0;
+	return UserCalc;
 }
 
 /* Returns the device type as a String. */

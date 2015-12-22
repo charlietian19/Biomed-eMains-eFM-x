@@ -45,7 +45,7 @@ namespace Biomed_eMains_eFMx {
 
 
 	/* Functions receiving callbacks and wrapping the data into managed arrays. */
-	void __cdecl SensorCallbackFunction(double *values, DWORD datalength, BYTE packetCounter);
+	void __cdecl SensorCallbackFunction(DWORD serial, double *values, DWORD datalength, BYTE packetCounter);
 	static void ParseData(double *buf, DWORD dataCount, array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
 
 	public ref class eMains
@@ -91,7 +91,8 @@ namespace Biomed_eMains_eFMx {
 #endif
 
 	/* Private instance fields. */
-		char flag1, UserCalc, Revision;
+		bool flag1, UserCalc;
+		char Revision;
 		String^ type;
 
 	/* Private instance methods. */
