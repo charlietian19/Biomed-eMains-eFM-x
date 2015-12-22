@@ -34,7 +34,7 @@ void eMains::InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
 static void Biomed_eMains_eFMx::ParseData(double *buf, DWORD dataCount, array<double>^ dataX,
 	array<double>^ dataY, array<double>^ dataZ)
 {
-	if (eMains::ConvertToMicroTesla) {
+	if (eMains::convertToMicroTesla) {
 		for (DWORD i = 0; i < dataCount / 3; i++)
 		{
 			dataX[i] = buf[i * 3] * eMains::SlopeX + eMains::OffsetX;
@@ -201,7 +201,7 @@ int eMains::DAQStart(bool convertToMicroTesla)
 	if (this->isReading)
 		return 0;
 
-	this->ConvertToMicroTesla = convertToMicroTesla;
+	this->convertToMicroTesla = convertToMicroTesla;
 
 	DLLMutex->WaitOne();
 #ifdef USE_CALLBACK

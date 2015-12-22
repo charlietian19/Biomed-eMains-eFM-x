@@ -99,6 +99,11 @@ namespace BiomedeMainseFMxtest
 		return error_DAQStop;
 	}
 
+	DWORD __cdecl SetCallbackStub(DWORD __in serial, void __in *callback, DWORD __in DataLength)
+	{
+		return 0;
+	}
+
 	[TestClass]
 	public ref class UnitTest
 	{
@@ -141,6 +146,9 @@ namespace BiomedeMainseFMxtest
 			eMains::_ReadKennung = ReadKennungStub;
 			eMains::_GetRevision = GetRevisionStub;
 			eMains::_DAQInitialize = DAQInitializeStub;
+			eMains::_DAQStart = DAQStartStub;
+			eMains::_DAQStop = DAQStopStub;
+			eMains::_SetCallback = SetCallbackStub;
 
 			/* Default state of the sensor. */
 			kennung = { { 'e', 'F', 'M', '3' }, 1, 0, 0 };
@@ -225,13 +233,45 @@ namespace BiomedeMainseFMxtest
 		/* Checks if DAQ Start arguments are forwarded and object flags are updated correctly. */
 		void DAQStartError()
 		{
-
-		}
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQStart = 12454;
+			int error = sensor->DAQStart(false);
+			Assert::AreEqual(12454, error);
+			Assert::AreEqual(false, sensor->convertToMicroTesla);
+			Assert::AreEqual(false, sensor->isReading);
+		};
 
 		[TestMethod]
 		void DAQStartSuccess()
 		{
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQStart = 0;
+			int error = sensor->DAQStart(true);
+			Assert::AreEqual(0, error);
+			Assert::AreEqual(true, sensor->convertToMicroTesla);
+			Assert::AreEqual(true, sensor->isReading);
+		}
 
+		[TestMethod]
+		/* Checks if DAQ Stop resets isReading flag. */
+		void DAQStopNotReading()
+		{
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQStop = 123;
+			int error = sensor->DAQStop();
+			Assert::AreEqual(0, error);
+			Assert::AreEqual(false, sensor->isReading);
+		}
+
+		[TestMethod]
+		void DAQStopAlreadyReading()
+		{
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQStop = 123;
+			sensor->isReading = true;
+			int error = sensor->DAQStop();
+			Assert::AreEqual(123, error);
+			Assert::AreEqual(false, sensor->isReading);
 		}
 	};
 }

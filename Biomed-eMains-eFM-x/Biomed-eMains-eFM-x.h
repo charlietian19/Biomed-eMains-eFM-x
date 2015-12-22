@@ -19,12 +19,13 @@ namespace Biomed_eMains_eFMx {
 		ZERO_TO_PLUS_5V = 3
 	};
 
-	static struct kennung {
+	/* Struct filled out by ReadKenung. */
+	struct kennung {
 		char deviceType[4];
 		__int16 serial;
 		char flag1;
 		char flag2;
-	} kennung;
+	};
 
 	/* Native DLL functions imported from eFM-x API.dll. */
 	typedef DWORD(__cdecl* GET_NUMBER_OF_DEVICES)(DWORD* __out num);
@@ -117,7 +118,7 @@ namespace Biomed_eMains_eFMx {
 		static double SlopeY = 0.0;
 		static double OffsetZ = 0.0;
 		static double SlopeZ = 0.0;
-		static bool ConvertToMicroTesla = false;
+		static bool convertToMicroTesla = false;
 
 		/* Expose the fields so the test can stub out the DLL calls. */
 #ifdef _DEBUG
