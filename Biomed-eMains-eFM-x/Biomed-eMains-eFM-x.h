@@ -18,6 +18,13 @@ namespace Biomed_eMains_eFMx {
 		ZERO_TO_PLUS_5V = 3
 	};
 
+	static struct kennung {
+		char deviceType[4];
+		__int16 serial;
+		char flag1;
+		char flag2;
+	} kennung;
+
 	/* Native DLL functions imported from eFM-x API.dll. */
 	typedef DWORD(__cdecl* GET_NUMBER_OF_DEVICES)(DWORD* __out num);
 	typedef DWORD(__cdecl* GET_REVISION)(DWORD __in serial, BYTE* __out rev);
@@ -39,7 +46,7 @@ namespace Biomed_eMains_eFMx {
 
 	/* Functions receiving callbacks and wrapping the data into managed arrays. */
 	void __cdecl SensorCallbackFunction(double *values, DWORD datalength, BYTE packetCounter);
-	static void parseData(double *buf, DWORD dataCount, array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
+	static void ParseData(double *buf, DWORD dataCount, array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
 
 	public ref class eMains
 	{
@@ -53,6 +60,11 @@ namespace Biomed_eMains_eFMx {
 		int DAQStart(bool convertToMicroTesla);
 		int DAQStop();
 		static void ShowErrorInformation(int error);
+		int SetUserCalc(bool convert);
+		bool GetUserCalc();
+		String^ GetType();
+		char GetRevision();
+		int GetSerial();
 
 
 		static void InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
@@ -63,14 +75,13 @@ namespace Biomed_eMains_eFMx {
 		// The reason why they are public and static now is that the DLL callback
 		// needs to access them and it was faster to code this way.
 		static event DataProcessingFunc^ NewDataHandler;
-		static double offsetX = 0.0;
-		static double slopeX = 0.0;
-		static double offsetY = 0.0;
-		static double slopeY = 0.0;
-		static double offsetZ = 0.0;
-		static double slopeZ = 0.0;
-		static bool convertToMicroTesla = false;
-
+		static double OffsetX = 0.0;
+		static double SlopeX = 0.0;
+		static double OffsetY = 0.0;
+		static double SlopeY = 0.0;
+		static double OffsetZ = 0.0;
+		static double SlopeZ = 0.0;
+		static bool ConvertToMicroTesla = false;
 
 		/* Expose the fields so the test can stub out the DLL calls. */
 #ifdef _DEBUG
@@ -78,10 +89,21 @@ namespace Biomed_eMains_eFMx {
 #else
 	private:
 #endif
+
+	/* Private instance fields. */
+		char flag1, UserCalc, Revision;
+		String^ type;
+
+	/* Private instance methods. */
+		int InitializeSlopes();
+		int InitializeOffsets();
+		int InitializeStatus();
+
 		void SensorPollingFunction();
 		bool isReading = false;
 		DWORD serial;
 
+	/* Function entry points extracted from the device library. */
 		static HINSTANCE eMainsDLL = NULL;
 		static GET_NUMBER_OF_DEVICES _GetNumberOfDevices = NULL;
 		static GET_REVISION _GetRevision = NULL;

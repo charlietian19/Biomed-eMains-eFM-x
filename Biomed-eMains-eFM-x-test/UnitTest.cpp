@@ -13,6 +13,8 @@ namespace BiomedeMainseFMxtest
 	static double offset = 0.0;
 	static int serialMult = 11;
 	static int deviceNumber = 3;
+	char revision = 66;
+	static struct kennung kennung = { { 'e', 'F', 'M', '3' }, 42, 0, 0 };
 
 	/* Stubs for eFM-x API.dll functions. */
 	DWORD __cdecl ReadSlopesStub(DWORD __in serial, double __out *values)
@@ -48,6 +50,18 @@ namespace BiomedeMainseFMxtest
 		return 0;
 	}
 
+	DWORD __cdecl ReadKennungStub(DWORD __in serial, BYTE* __out data)
+	{
+		_memccpy(data, &kennung, 1, sizeof(struct kennung));
+		return 0;
+	}
+
+	DWORD __cdecl GetRevisionStub(DWORD __in serial, BYTE* __out rev)
+	{
+		*rev = revision;
+		return 0;
+	}
+
 
 	[TestClass]
 	public ref class UnitTest
@@ -76,16 +90,21 @@ namespace BiomedeMainseFMxtest
 		static void MyClassInitialize(Microsoft::VisualStudio::TestTools::UnitTesting::TestContext^ testContext) {
 			eMains::_ReadSlopes = ReadSlopesStub;
 			eMains::_ReadOffsets = ReadOffsetsStub;
+			eMains::_ReadKennung = ReadKennungStub;
+			eMains::_GetRevision = GetRevisionStub;
 		};
 		
 		#pragma endregion 
 
 		[TestMethod]
-		/* Checks if the new eMains object is created correctly without eFM-x API.dll */
+		/* Checks if the new eMains object is initialized correctly without eFM-x API.dll */
 		void CreateNewSensor()
 		{
-			eMains^ sensor = gcnew eMains(123);
-			Assert::AreEqual<Int32>(123, sensor->serial);
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			Assert::AreEqual<Int32>(kennung.serial, sensor->GetSerial());
+			Assert::AreEqual(kennung.flag2 != 0, sensor->GetUserCalc());
+			Assert::AreEqual("eFM3", sensor->GetType());
+			Assert::AreEqual(revision, sensor->GetRevision());
 		};
 
 		[TestMethod]
@@ -102,5 +121,6 @@ namespace BiomedeMainseFMxtest
 				Assert::AreEqual(i * serialMult, serials[i]);
 			}
 		};
+
 	};
 }

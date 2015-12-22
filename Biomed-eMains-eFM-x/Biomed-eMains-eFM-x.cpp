@@ -23,7 +23,7 @@ void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(double *values, DWORD da
 		array<double>^ dataX = gcnew array<double>(datalength / 3);
 		array<double>^ dataY = gcnew array<double>(datalength / 3);
 		array<double>^ dataZ = gcnew array<double>(datalength / 3);
-		Biomed_eMains_eFMx::parseData(values, datalength, dataX, dataY, dataZ);
+		Biomed_eMains_eFMx::ParseData(values, datalength, dataX, dataY, dataZ);
 		eMains::InvokeNewDataHandler(dataX, dataY, dataZ, systemSeconds, time, datalength);
 	}
 }
@@ -43,15 +43,15 @@ void eMains::InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
 	corresponding managed arrays. The data is converted to uT according to
 	the sensor calibration.
 */
-static void Biomed_eMains_eFMx::parseData(double *buf, DWORD dataCount, array<double>^ dataX,
+static void Biomed_eMains_eFMx::ParseData(double *buf, DWORD dataCount, array<double>^ dataX,
 	array<double>^ dataY, array<double>^ dataZ)
 {
-	if (eMains::convertToMicroTesla) {
+	if (eMains::ConvertToMicroTesla) {
 		for (DWORD i = 0; i < dataCount / 3; i++)
 		{
-			dataX[i] = buf[i * 3] * eMains::slopeX + eMains::offsetX;
-			dataY[i] = buf[i * 3 + 1] * eMains::slopeY + eMains::offsetY;
-			dataZ[i] = buf[i * 3 + 2] * eMains::slopeZ + eMains::offsetZ;
+			dataX[i] = buf[i * 3] * eMains::SlopeX + eMains::OffsetX;
+			dataY[i] = buf[i * 3 + 1] * eMains::SlopeY + eMains::OffsetY;
+			dataZ[i] = buf[i * 3 + 2] * eMains::SlopeZ + eMains::OffsetZ;
 		}
 	}
 	else
@@ -69,18 +69,64 @@ static void Biomed_eMains_eFMx::parseData(double *buf, DWORD dataCount, array<do
 /* eMains sensor object constructor. */
 eMains::eMains(int serial)
 {
-	double values[3];
 	this->serial = serial;
 
-	_ReadSlopes(serial, values);
-	slopeX = values[0];
-	slopeY = values[1];
-	slopeZ = values[2];
+	InitializeSlopes();
+	InitializeOffsets();
+	InitializeStatus();
+}
 
-	_ReadOffsets(serial, values);
-	offsetX = values[0];
-	offsetY = values[1];
-	offsetZ = values[2];
+/* Reads out X, Y, Z slopes from the calibration data and saves them in the object. */
+int Biomed_eMains_eFMx::eMains::InitializeSlopes()
+{
+	double values[3];
+	int error = _ReadSlopes(serial, values);
+	if (!error)
+	{
+		SlopeX = values[0];
+		SlopeY = values[1];
+		SlopeZ = values[2];
+	}
+	return error;
+}
+
+/* Reads out X, Y, Z offsets from the calibration data and saves them in the object. */
+int Biomed_eMains_eFMx::eMains::InitializeOffsets()
+{
+	double values[3];
+	int error = _ReadOffsets(serial, values);
+	if (!error)
+	{
+		OffsetX = values[0];
+		OffsetY = values[1];
+		OffsetZ = values[2];
+	}
+	return error;
+}
+
+/* Reads out the device information and saves it in the object. */
+int Biomed_eMains_eFMx::eMains::InitializeStatus()
+{
+	struct kennung kennung;
+	int error = _ReadKennung(serial, (BYTE *)&kennung);
+	if (!error)
+	{
+		type = gcnew String(kennung.deviceType, 0, 4);
+		flag1 = kennung.flag1;
+		UserCalc = kennung.flag2;
+	}
+	else
+	{
+		return error;
+	}
+
+	BYTE revision;
+	error = _GetRevision(serial, &revision);
+	if (!error)
+	{
+		Revision = revision;
+	}
+	return error;
 }
 
 /* Locates and loads eFM-x API.dll */
@@ -171,7 +217,7 @@ int eMains::DAQStart(bool convertToMicroTesla)
 	if (this->isReading)
 		return 0;
 
-	this->convertToMicroTesla = convertToMicroTesla;
+	this->ConvertToMicroTesla = convertToMicroTesla;
 
 #ifdef USE_CALLBACK
 	_SetCallback(this->serial, &SensorCallbackFunction, 0);
@@ -182,12 +228,6 @@ int eMains::DAQStart(bool convertToMicroTesla)
 	{
 		return res;
 	}
-
-	//res = _SetUserCalc(this->serial, 0);
-	//if (res)
-	//{
-	//	return res;
-	//}
 
 	this->isReading = true;
 
@@ -216,6 +256,47 @@ int eMains::DAQStop()
 void eMains::ShowErrorInformation(int error)
 {
 	_ShowErrorInformation(error, 0);
+}
+
+/**
+ * Sets whether the device sends the data in DAC voltage units, or in magnetic field units,
+ * according to the internal calibration data
+ */
+int Biomed_eMains_eFMx::eMains::SetUserCalc(bool convert)
+{
+	int error = _SetUserCalc(this->serial, convert);
+	if (!error)
+	{
+		UserCalc = convert;
+	}
+	return error;
+}
+
+/**
+* Sets whether the device sends the data in DAC voltage units, or in magnetic field units,
+* according to the internal calibration data
+*/
+bool Biomed_eMains_eFMx::eMains::GetUserCalc()
+{
+	return UserCalc != 0;
+}
+
+/* Returns the device type as a String. */
+String ^ Biomed_eMains_eFMx::eMains::GetType()
+{
+	return type;
+}
+
+/* Returns ADC revision. */
+char Biomed_eMains_eFMx::eMains::GetRevision()
+{
+	return Revision;
+}
+
+/* Returns serial that this object was created with. */
+int Biomed_eMains_eFMx::eMains::GetSerial()
+{
+	return serial;
 }
 
 
@@ -248,7 +329,7 @@ void eMains::SensorPollingFunction() {
 				array<double>^ dataX = gcnew array<double>(dataCount / 3);
 				array<double>^ dataY = gcnew array<double>(dataCount / 3);
 				array<double>^ dataZ = gcnew array<double>(dataCount / 3);
-				parseData(buf, dataCount, dataX, dataY, dataZ);
+				ParseData(buf, dataCount, dataX, dataY, dataZ);
 				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time, dataCount);
 			}
 		}
