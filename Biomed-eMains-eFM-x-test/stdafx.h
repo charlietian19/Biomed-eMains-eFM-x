@@ -3,3 +3,7 @@
 // but are changed infrequently
 
 #pragma once
+namespace BiomedeMainseFMxtest
+{
+	ref class UnitTest;
+}

@@ -43,7 +43,6 @@ namespace Biomed_eMains_eFMx {
 
 	public ref class eMains
 	{
-
 	public:
 		delegate void DataProcessingFunc(array<double>^ dataX, array<double>^ dataY,
 			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples);
@@ -72,7 +71,13 @@ namespace Biomed_eMains_eFMx {
 		static double slopeZ = 0.0;
 		static bool convertToMicroTesla = false;
 
+
+		/* Expose the fields so the test can stub out the DLL calls. */
+#ifdef _DEBUG
+	public:
+#else
 	private:
+#endif
 		void SensorPollingFunction();
 		bool isReading = false;
 		DWORD serial;
