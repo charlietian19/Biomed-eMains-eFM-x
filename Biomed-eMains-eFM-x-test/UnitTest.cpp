@@ -11,26 +11,30 @@ using namespace Biomed_eMains_eFMx;
 namespace BiomedeMainseFMxtest
 {
 	/* Fake sensor parameters. */
-	static double slope;
-	static double offset;
-	static int serialMult;
-	static int deviceNumber;
-	char revision;
-	static struct kennung kennung;
+	static double slope;			// Slope calibration value
+	static double offset;			// Offset calibration value
+	static int serialMult;			// serial = i * serialMult when returning an array of sensors
+	static int deviceNumber;		// Total number of sensors found
+	char revision;					// ADC revision
+	static struct kennung kennung;	// Every sensor returns this kennung structure
 
 	/* DAQInitialize call parameters and return value. */
-	double SamplingRate_DAQinit;
-	int MeasurementRange_DAQinit;
-	int chop_DAQinit;
-	int clamp_DAQinit;
-	int error_DAQinit;
-	int serial_DAQinit;
+	double SamplingRate_DAQinit;	// Received sampling rate value
+	int MeasurementRange_DAQinit;	// Received range value
+	int chop_DAQinit;				// Received chomp value
+	int clamp_DAQinit;				// Received clamp value
+	int serial_DAQinit;				// Received serial value
+	int error_DAQinit;				// Value to return
 
-	/* DAQStart call parameters and return value. */
+	/* DAQStart return value. */
 	int error_DAQStart;
 
-	/* DAQStop call parameters and return value. */
+	/* DAQStop return value. */
 	int error_DAQStop;
+	
+	/* SetUserCalc call parameters and return value. */
+	unsigned char on_off_SetUserCalc;			// Received parameter
+	int error_SetUserCalc;			// Value to return
 
 	/* Stubs for eFM-x API.dll functions. */
 	DWORD __cdecl ReadSlopesStub(DWORD __in serial, double __out *values)
@@ -104,6 +108,23 @@ namespace BiomedeMainseFMxtest
 		return 0;
 	}
 
+	DWORD __cdecl DAQReadDataStub(DWORD __in serial, double* __out buf,
+		DWORD __in DataBufferLength, DWORD* __out OutputLength, DWORD __in TimeOut)
+	{
+		if (TimeOut > 0)
+		{
+			Sleep(TimeOut);
+		}
+		*OutputLength = 0;
+		return 0;
+	}
+
+	DWORD __cdecl SetUserCalcStub(DWORD __in serial, unsigned char __in on_off)
+	{
+		on_off_SetUserCalc = on_off;
+		return error_SetUserCalc;
+	}
+
 	[TestClass]
 	public ref class UnitTest
 	{
@@ -140,7 +161,7 @@ namespace BiomedeMainseFMxtest
 			/* Grab the stub lock*/
 			stubLock->WaitOne();
 
-			/* Stub functions called when a class object is instantiated. */
+			/* Stub functions for DLL calls. */
 			eMains::_ReadSlopes = ReadSlopesStub;
 			eMains::_ReadOffsets = ReadOffsetsStub;
 			eMains::_ReadKennung = ReadKennungStub;
@@ -149,6 +170,8 @@ namespace BiomedeMainseFMxtest
 			eMains::_DAQStart = DAQStartStub;
 			eMains::_DAQStop = DAQStopStub;
 			eMains::_SetCallback = SetCallbackStub;
+			eMains::_DAQReadData = DAQReadDataStub;
+			eMains::_SetUserCalc = SetUserCalcStub;
 
 			/* Default state of the sensor. */
 			kennung = { { 'e', 'F', 'M', '3' }, 1, 0, 0 };
@@ -166,6 +189,8 @@ namespace BiomedeMainseFMxtest
 			error_DAQinit = 0;
 			error_DAQStart = 0;
 			error_DAQStop = 0;
+			on_off_SetUserCalc = 0;
+			error_SetUserCalc = 0;
 		};
 
 		[TestCleanup()]
@@ -176,8 +201,8 @@ namespace BiomedeMainseFMxtest
 		};
 
 		#pragma endregion 
-		[TestMethod]
 		/* Checks if the new eMains object is initialized correctly without eFM-x API.dll */
+		[TestMethod]
 		void CreateNewSensor1()
 		{
 			kennung = { { 'o', 'L', '0', 'L' }, 34, 1, 1 };
@@ -199,9 +224,8 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual(revision, sensor->GetRevision());
 		};
 
-
-		[TestMethod]
 		/* Checks if the list of devices is retrieved correctly. */
+		[TestMethod]
 		void GetDeviceList()
 		{
 			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
@@ -215,8 +239,8 @@ namespace BiomedeMainseFMxtest
 			}
 		};
 
-		[TestMethod]
 		/* Checks if DAQ Initialize arguments are forwarded correctly. */
+		[TestMethod]
 		void DAQInitialize()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
@@ -229,8 +253,8 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual(123, error);
 		}
 
-		[TestMethod]
 		/* Checks if DAQ Start arguments are forwarded and object flags are updated correctly. */
+		[TestMethod]
 		void DAQStartError()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
@@ -252,19 +276,20 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual(true, sensor->isReading);
 		}
 
-		[TestMethod]
 		/* Checks if DAQ Stop resets isReading flag. */
+		[TestMethod]
 		void DAQStopNotReading()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStop = 123;
+			sensor->isReading = false;
 			int error = sensor->DAQStop();
 			Assert::AreEqual(0, error);
 			Assert::AreEqual(false, sensor->isReading);
 		}
 
 		[TestMethod]
-		void DAQStopAlreadyReading()
+		void DAQStopWhileReading()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStop = 123;
@@ -272,6 +297,29 @@ namespace BiomedeMainseFMxtest
 			int error = sensor->DAQStop();
 			Assert::AreEqual(123, error);
 			Assert::AreEqual(false, sensor->isReading);
+		}
+
+		/* Checks if SetUserCalc forwards the parameters correctly and updates the instance state. */
+		[TestMethod]
+		void SetUserCalcSuccess()
+		{
+			error_SetUserCalc = 0;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			sensor->UserCalc = false;
+			sensor->SetUserCalc(true);
+			Assert::AreEqual<Byte>(1, on_off_SetUserCalc);
+			Assert::AreEqual(true, sensor->GetUserCalc());
+		}
+
+		[TestMethod]
+		void SetUserCalcError()
+		{
+			error_SetUserCalc = 123;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			sensor->UserCalc = true;
+			sensor->SetUserCalc(false);
+			Assert::AreEqual<Byte>(0, on_off_SetUserCalc);
+			Assert::AreEqual(true, sensor->GetUserCalc());
 		}
 	};
 }
