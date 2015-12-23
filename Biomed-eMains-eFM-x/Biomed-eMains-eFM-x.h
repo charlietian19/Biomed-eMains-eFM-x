@@ -3,6 +3,7 @@
 #pragma once
 #include <windows.h>
 #define USE_CALLBACK
+//#define BUILD_WITH_TESTS
 
 using namespace System;
 using namespace System::Threading;
@@ -107,7 +108,7 @@ namespace Biomed_eMains_eFMx {
 		event DataProcessingFunc^ NewDataHandler;
 
 		/* Expose the fields so the test can stub out the DLL calls. */
-#ifdef _DEBUG
+#ifdef BUILD_WITH_TESTS
 	public:
 #else
 	private:
