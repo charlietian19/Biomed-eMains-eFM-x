@@ -33,8 +33,12 @@ namespace BiomedeMainseFMxtest
 	int error_DAQStop;
 	
 	/* SetUserCalc call parameters and return value. */
-	unsigned char on_off_SetUserCalc;			// Received parameter
-	int error_SetUserCalc;			// Value to return
+	unsigned char on_off_SetUserCalc;	// Received parameter
+	int error_SetUserCalc;				// Value to return
+
+	int sensor1_calls;
+	int sensor2_calls;
+	int sensor3_calls;
 
 	/* Stubs for eFM-x API.dll functions. */
 	DWORD __cdecl ReadSlopesStub(DWORD __in serial, double __out *values)
@@ -131,6 +135,23 @@ namespace BiomedeMainseFMxtest
 	private:
 		TestContext^ testContextInstance;
 		static Mutex^ stubLock; // the DLL stubs are not thread-safe
+		static void DataHandlerSensor1(array<double>^ dataX, array<double>^ dataY,
+			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+		{
+			sensor1_calls += 1;
+		}
+
+		static void DataHandlerSensor2(array<double>^ dataX, array<double>^ dataY,
+			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+		{
+			sensor2_calls += 1;
+		}
+
+		static void DataHandlerSensor3(array<double>^ dataX, array<double>^ dataY,
+			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+		{
+			sensor3_calls += 1;
+		}
 
 	public: 
 		/// <summary>
@@ -191,6 +212,9 @@ namespace BiomedeMainseFMxtest
 			error_DAQStop = 0;
 			on_off_SetUserCalc = 0;
 			error_SetUserCalc = 0;
+			sensor1_calls = 0;
+			sensor2_calls = 0;
+			sensor3_calls = 0;
 		};
 
 		[TestCleanup()]
@@ -321,5 +345,30 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual<Byte>(0, on_off_SetUserCalc);
 			Assert::AreEqual(true, sensor->GetUserCalc());
 		}
+
+#ifdef USE_CALLBACK
+		/* Checks if the data reaches the correct sensor instance. */
+		[TestMethod]
+		void DispatchDataSimple()
+		{
+			eMains^ sensor1 = gcnew eMains(1);
+			eMains^ sensor2 = gcnew eMains(2);
+			array<double>^ data = gcnew array<double>(3);
+			sensor1->NewDataHandler += gcnew eMains::DataProcessingFunc(&DataHandlerSensor1);
+			sensor2->NewDataHandler += gcnew eMains::DataProcessingFunc(&DataHandlerSensor2);
+			Assert::AreEqual(0, sensor1_calls);
+			Assert::AreEqual(0, sensor2_calls);
+			eMains::InvokeDataHandler(1, data, data, data, 0, System::DateTime::Now, 0);
+			Assert::AreEqual(1, sensor1_calls);
+			Assert::AreEqual(0, sensor2_calls);
+			eMains::InvokeDataHandler(1, data, data, data, 0, System::DateTime::Now, 0);
+			Assert::AreEqual(2, sensor1_calls);
+			Assert::AreEqual(0, sensor2_calls);
+			eMains::InvokeDataHandler(2, data, data, data, 0, System::DateTime::Now, 0);
+			Assert::AreEqual(2, sensor1_calls);
+			Assert::AreEqual(1, sensor2_calls);
+		}
+#endif
+
 	};
 }

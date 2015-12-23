@@ -49,10 +49,6 @@ namespace Biomed_eMains_eFMx {
 	/* Functions receiving callbacks and wrapping the data into managed arrays. Called every time new data arrives. */
 	void __cdecl SensorCallbackFunction(DWORD serial, double *values, DWORD datalength, BYTE packetCounter);
 
-	/* Splits the raw data in the buffer on three channels and puts them into the corresponding managed arrays.
-	The data is converted to uT according to the sensor calibration. */
-	static void ParseData(double *buf, DWORD dataCount, array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
-
 	public ref class eMains
 	{
 	public:
@@ -68,7 +64,7 @@ namespace Biomed_eMains_eFMx {
 
 		/* Invokes a data handler event if one is register. The purpose of this function is to dispatch the
 		received data to the corecct object. A native function has to invoke it so it's public. */
-		static void InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
+		static void InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,
 			array<double>^ dataZ, double microsecondsSinceLastData, DateTime^ time, int samples);
 
 		/* Describes a user function to be called when the data arrives. */
@@ -107,18 +103,8 @@ namespace Biomed_eMains_eFMx {
 		/* Returns the device serial. */
 		int GetSerial();
 
-		// These functions and fields will be private and instance in future releases
-		// in order to support multiple sensors per program.
-		// The reason why they are public and static now is that the DLL callback
-		// needs to access them and it was faster to code this way.
-		static event DataProcessingFunc^ NewDataHandler;
-		static double OffsetX = 0.0;
-		static double SlopeX = 0.0;
-		static double OffsetY = 0.0;
-		static double SlopeY = 0.0;
-		static double OffsetZ = 0.0;
-		static double SlopeZ = 0.0;
-		static bool convertToMicroTesla = false;
+		/* Event handler for the arriving data. */
+		event DataProcessingFunc^ NewDataHandler;
 
 		/* Expose the fields so the test can stub out the DLL calls. */
 #ifdef _DEBUG
@@ -126,6 +112,22 @@ namespace Biomed_eMains_eFMx {
 #else
 	private:
 #endif
+		/* Keeps tracks of the active eMains objects to dispatch the data to them. */
+		static Dictionary<DWORD, eMains^>^ activeSensors = gcnew Dictionary<DWORD, eMains^>();
+
+		/* Sensor calibration data. */
+		double OffsetX = 0.0;	// Bx[uT] = OffsetX + SlopeX * x
+		double SlopeX = 0.0;	// Bx[uT] = OffsetX + SlopeX * x
+		
+		double OffsetY = 0.0;	// By[uT] = OffsetY + SlopeY * y
+		double SlopeY = 0.0;	// By[uT] = OffsetY + SlopeY * y
+		
+		double OffsetZ = 0.0;	// Bz[uT] = OffsetZ + SlopeZ * z
+		double SlopeZ = 0.0;	// Bz[uT] = OffsetZ + SlopeZ * z
+		
+		/* If true, the magnetic field is in uT, otherwise it's DAC voltage. */
+		bool convertToMicroTesla = true;
+
 		/* Flags retreived by ReagKennung */
 		bool flag1, UserCalc;
 
@@ -154,6 +156,9 @@ namespace Biomed_eMains_eFMx {
 
 		/* Serial that this instance was created with. */
 		DWORD serial;
+
+		/* Scales the raw data according to the instance settings. */
+		void ConvertDataUnits(array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ);
 
 	/* Function entry points extracted from the device library. */
 		/* Lock synchronizing the DLL calls. */

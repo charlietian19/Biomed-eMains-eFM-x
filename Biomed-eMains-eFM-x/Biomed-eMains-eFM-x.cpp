@@ -20,43 +20,57 @@ void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *va
 		array<double>^ dataX = gcnew array<double>(datalength / 3);
 		array<double>^ dataY = gcnew array<double>(datalength / 3);
 		array<double>^ dataZ = gcnew array<double>(datalength / 3);
-		Biomed_eMains_eFMx::ParseData(values, datalength, dataX, dataY, dataZ);
-		eMains::InvokeNewDataHandler(dataX, dataY, dataZ, systemSeconds, time, datalength);
+		for (DWORD i = 0; i < datalength / 3; i++)
+		{
+			dataX[i] = values[i * 3];
+			dataY[i] = values[i * 3 + 1];
+			dataZ[i] = values[i * 3 + 2];
+		}
+		eMains::InvokeDataHandler(serial, dataX, dataY, dataZ, systemSeconds, time, datalength);
 	}
 }
 
-void eMains::InvokeNewDataHandler(array<double>^ dataX, array<double>^ dataY,
+void eMains::InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,
 	array<double>^ dataZ, double microsecondsSinceLastData, DateTime ^ time, int samples)
 {
-	NewDataHandler(dataX, dataY, dataZ, microsecondsSinceLastData, time, samples);
+	if (activeSensors->ContainsKey(serial))
+	{
+		eMains^ sensor = activeSensors[serial];
+		sensor->ConvertDataUnits(dataX, dataY, dataZ);
+		sensor->NewDataHandler(dataX, dataY, dataZ, microsecondsSinceLastData, time, samples);
+	}
 }
 
-static void Biomed_eMains_eFMx::ParseData(double *buf, DWORD dataCount, array<double>^ dataX,
-	array<double>^ dataY, array<double>^ dataZ)
+void eMains::ConvertDataUnits(array<double>^ dataX, array<double>^ dataY, array<double>^ dataZ)
 {
-	if (eMains::convertToMicroTesla) {
-		for (DWORD i = 0; i < dataCount / 3; i++)
-		{
-			dataX[i] = buf[i * 3] * eMains::SlopeX + eMains::OffsetX;
-			dataY[i] = buf[i * 3 + 1] * eMains::SlopeY + eMains::OffsetY;
-			dataZ[i] = buf[i * 3 + 2] * eMains::SlopeZ + eMains::OffsetZ;
-		}
-	}
-	else
+	if ((convertToMicroTesla && UserCalc) || (!convertToMicroTesla && !UserCalc))
 	{
-		for (DWORD i = 0; i < dataCount / 3; i++)
+		return; // The data is in the same units as the user wants it
+	}
+	else if (convertToMicroTesla && !UserCalc)
+	{
+		for (int i = 0; i < dataX->Length; i++) // Data is in volts, the user wants it in uT
 		{
-			dataX[i] = buf[i * 3];
-			dataY[i] = buf[i * 3 + 1];
-			dataZ[i] = buf[i * 3 + 2];
+			dataX[i] = OffsetX + SlopeX * dataX[i];
+			dataY[i] = OffsetY + SlopeY * dataY[i];
+			dataZ[i] = OffsetZ + SlopeZ * dataZ[i];
 		}
 	}
-
+	else // if (!convertToMicroTesla && UserCalc) // Data is in uT, the user wants it in volts
+	{
+		for (int i = 0; i < dataX->Length; i++)
+		{
+			dataX[i] = (dataX[i] - OffsetX) / SlopeX;
+			dataY[i] = (dataY[i] - OffsetY) / SlopeY;
+			dataZ[i] = (dataZ[i] - OffsetZ) / SlopeZ;
+		}
+	}
 }
 
 eMains::eMains(int serial)
 {
 	this->serial = serial;
+	activeSensors[serial] = this;
 
 	InitializeSlopes();
 	InitializeOffsets();
@@ -301,7 +315,13 @@ void eMains::SensorPollingFunction() {
 				array<double>^ dataX = gcnew array<double>(dataCount / 3);
 				array<double>^ dataY = gcnew array<double>(dataCount / 3);
 				array<double>^ dataZ = gcnew array<double>(dataCount / 3);
-				ParseData(buf, dataCount, dataX, dataY, dataZ);
+				for (DWORD i = 0; i < dataCount / 3; i++)
+				{
+					dataX[i] = buf[i * 3];
+					dataY[i] = buf[i * 3 + 1];
+					dataZ[i] = buf[i * 3 + 2];
+				}
+				ConvertDataUnits(dataX, dataY, dataZ);
 				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time, dataCount);
 			}
 		}
