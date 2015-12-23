@@ -6,4 +6,4 @@ New eMains objects are instantiated given a _serial_, and each object represents
 
 The data can be retrieved with polling (the default eFM-x API.dll method), or using the new callback interface, that requires a compatible version of eFM-x API.dll. The data is timestamped upon arrival with both system date/time (~15 ms resolution) and system high resolution timer (<1us resolution).
 
-Test project only builds and runs in Debug config.
+Test project only builds and runs in Debug config because of issues with accessors.
