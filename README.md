@@ -1,6 +1,6 @@
 # Biomed-eMains-eFM-x
 This project is a wrapper DLL for unmanaged code in eFM-x API.dll (Biomed fluxgate magnetometer). Provides managed eMains class for use in C# projects. 
-The class implements minimal number of functions needed for the data acqisition, and is thread-safe (at least as long as there is only one process using the device driver).
+The class implements minimal number of functions needed for the data acqisition, and is thread-safe (at least as long as there is only one process using eFM-x API.dll).
 
 New eMains objects are instantiated given a _serial_, and each object represents a device connected to the computer. The method names and signatures are mostly the same as in the user manual coming with the device. Functions that take _serial_ as a parameter become instance methods. See Biomed-eMains-eFM-x.h for class interface details.
 
