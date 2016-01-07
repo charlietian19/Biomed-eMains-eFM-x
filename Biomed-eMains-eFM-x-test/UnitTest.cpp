@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
-#include "../Biomed-eMains-eFM-x/Biomed-eMains-eFM-x.h"
-#include "../Biomed-eMains-eFM-x/eMainsException.h"
+#include "Biomed-eMains-eFM-x.h"
+#include "eMainsException.h"
 
 using namespace System;
 using namespace System::Threading;
@@ -264,6 +264,46 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual(revision, sensor->GetRevision());
 		};
 
+		/* Checks if the eMains object throws exception on initialization when 
+		ReadSlopes fails*/
+		[TestMethod]
+		[ExpectedException(eMainsException::typeid)]
+		void ReadSlopesError()
+		{
+			error_ReadSlopes = 123;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+		}
+
+		/* Checks if the eMains object throws exception on initialization when
+		ReadOffsets fails*/
+		[TestMethod]
+		[ExpectedException(eMainsException::typeid)]
+		void ReadOffsetsError()
+		{
+			error_ReadOffsets = 123;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+		}
+
+		/* Checks if the eMains object throws exception on initialization when
+		ReadKennung fails*/
+		[TestMethod]
+		[ExpectedException(eMainsException::typeid)]
+		void ReadKennungError()
+		{
+			error_ReadKennung = 123;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+		}
+
+		/* Checks if the eMains object throws exception on initialization when
+		ReadRevision fails*/
+		[TestMethod]
+		[ExpectedException(eMainsException::typeid)]
+		void GetRevisionError()
+		{
+			error_GetRevision = 123;
+			eMains^ sensor = gcnew eMains(kennung.serial);
+		}
+
 		/* Checks if the list of devices is retrieved correctly. */
 		[TestMethod]
 		void GetDeviceListSuccess()
@@ -282,7 +322,7 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if the device initialization throws exception if error happens. */
 		[TestMethod]
-		[ExpectedException(typeof(eMainsException)]
+		[ExpectedException(eMainsException::typeid)]
 		void GetDeviceListError()
 		{
 			error_GetNumberOfDevices = 5234;
@@ -306,7 +346,7 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if DAQ Initialize throws exception. */
 		[TestMethod]
-		[ExpectedException(typeof(eMainsException)]
+		[ExpectedException(eMainsException::typeid)]
 		void DAQInitializeError()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
@@ -316,7 +356,7 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if DAQ Start arguments are forwarded and object flags are updated correctly. */
 		[TestMethod]
-		[ExpectedException(typeof(eMainsException)]
+		[ExpectedException(eMainsException::typeid)]
 		void DAQStartError()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
@@ -360,7 +400,7 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if DAQ Stop throws exception on error. */
 		[TestMethod]
-		[ExpectedException(typeof(eMainsException)]
+		[ExpectedException(eMainsException::typeid)]
 		void DAQStopError()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
@@ -385,7 +425,7 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if SetUserCalc throws the exception on error. */
 		[TestMethod]
-		[ExpectedException(typeof(eMainsException)]
+		[ExpectedException(eMainsException::typeid)]
 		void SetUserCalcError()
 		{
 			error_SetUserCalc = 123;

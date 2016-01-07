@@ -1,17 +1,30 @@
 #pragma once
 
-ref class eMainsException : Exception
-{
-public:
-	eMainsException(int error);
-	eMainsException(int error, String^ msg);
-	eMainsException(String^ msg);
-};
+using namespace System;
 
-ref class eMainsTimeoutException : eMainsException
-{
-public:
-	eMainsTimeoutException(int error);
-	eMainsTimeoutException(int error, String^ msg);
-};
+namespace Biomed_eMains_eFMx {
+	public ref class eMainsException : public Exception
+	{
+	public:
+		eMainsException(int error) : Exception()
+		{
+			Data["error"] = error;
+		}
 
+		eMainsException(int error, String^ msg) : Exception(msg)
+		{
+			Data["error"] = error;
+		}
+
+		eMainsException(String^ msg) : Exception(msg) {};
+
+	};
+
+	public ref class eMainsTimeoutException : public eMainsException
+	{
+	public:
+		eMainsTimeoutException(int error) : eMainsException(error) {}
+		eMainsTimeoutException(int error, String^ msg) : eMainsException(error, msg) {};
+	};
+
+}
