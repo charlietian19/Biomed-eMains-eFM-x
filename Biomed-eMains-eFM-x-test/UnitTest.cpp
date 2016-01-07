@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Biomed-eMains-eFM-x.h"
-#include "eMainsException.h"
+#include "..\Biomed-eMains-eFM-x\Biomed-eMains-eFM-x.h"
+#include "..\Biomed-eMains-eFM-x\eMainsException.h"
 
 using namespace System;
 using namespace System::Threading;
@@ -193,16 +193,21 @@ namespace BiomedeMainseFMxtest
 			stubLock->WaitOne();
 
 			/* Stub functions for DLL calls. */
-			eMains::_ReadSlopes = ReadSlopesStub;
-			eMains::_ReadOffsets = ReadOffsetsStub;
-			eMains::_ReadKennung = ReadKennungStub;
-			eMains::_GetRevision = GetRevisionStub;
-			eMains::_DAQInitialize = DAQInitializeStub;
-			eMains::_DAQStart = DAQStartStub;
-			eMains::_DAQStop = DAQStopStub;
-			eMains::_SetCallback = SetCallbackStub;
-			eMains::_DAQReadData = DAQReadDataStub;
-			eMains::_SetUserCalc = SetUserCalcStub;
+			eMains::DebuggingSetupMockDLL(
+				(GET_NUMBER_OF_DEVICES)&GetNumberOfDevicesStub, 
+				(GET_REVISION)&GetRevisionStub,
+				(GET_AVAILABLE_SERIAL_NUMBERS)&GetAvailableSerialsStub,
+				(IS_DEVICE_CONNECTED)NULL,
+				(READ_KENNUNG)&ReadKennungStub,
+				(DAQ_INITIALIZE)&DAQInitializeStub,
+				(DAQ_START)&DAQStartStub,
+				(DAQ_STOP)&DAQStopStub,
+				(DAQ_READDATA)&DAQReadDataStub, 
+				(SHOW_ERROR_INFORMATION)NULL,
+				(SET_CALLBACK)&SetCallbackStub,
+				(SET_USER_CALC)&SetUserCalcStub, 
+				(READ_SLOPES)&ReadSlopesStub,
+				(READ_OFFSETS)&ReadOffsetsStub);
 
 			/* Default state of the sensor. */
 			kennung = { { 'e', 'F', 'M', '3' }, 1, 0, 0 };
@@ -309,9 +314,7 @@ namespace BiomedeMainseFMxtest
 		void GetDeviceListSuccess()
 		{
 			error_GetNumberOfDevices = 0;
-			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
-			eMains::_GetNumberOfDevices = GetNumberOfDevicesStub;
-
+			
 			List<int>^ serials = eMains::GetAvailableSerials();
 			Assert::AreEqual(deviceNumber, serials->Count);
 			for (int i = 1; i < deviceNumber; i++)
@@ -326,8 +329,6 @@ namespace BiomedeMainseFMxtest
 		void GetDeviceListError()
 		{
 			error_GetNumberOfDevices = 5234;
-			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
-			eMains::_GetNumberOfDevices = GetNumberOfDevicesStub;
 			List<int>^ serials = eMains::GetAvailableSerials();
 		};
 
@@ -362,8 +363,10 @@ namespace BiomedeMainseFMxtest
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 12454;
 			sensor->DAQStart(false);
-			Assert::AreEqual(false, sensor->convertToMicroTesla);
-			Assert::AreEqual(false, sensor->isReading);
+			bool isReading = sensor->DebuggingGetIsReading();
+			bool convertToMicroTesla = sensor->DebuggingGetConvertToMicrotesla();
+			Assert::AreEqual(false, convertToMicroTesla);
+			Assert::AreEqual(false, isReading);
 		};
 
 		[TestMethod]
@@ -372,8 +375,10 @@ namespace BiomedeMainseFMxtest
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 0;
 			sensor->DAQStart(true);
-			Assert::AreEqual(true, sensor->convertToMicroTesla);
-			Assert::AreEqual(true, sensor->isReading);
+			bool isReading = sensor->DebuggingGetIsReading();
+			bool convertToMicroTesla = sensor->DebuggingGetConvertToMicrotesla();
+			Assert::AreEqual(true, convertToMicroTesla);
+			Assert::AreEqual(true, isReading);
 		}
 
 		/* Checks if DAQ Stop resets isReading flag. */
@@ -382,9 +387,10 @@ namespace BiomedeMainseFMxtest
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStop = 123; // DLL function should NOT be called
-			sensor->isReading = false;
+			sensor->DebuggingSetIsReading(false);
 			sensor->DAQStop();
-			Assert::AreEqual(false, sensor->isReading);
+			bool isReading = sensor->DebuggingGetIsReading();
+			Assert::AreEqual(false, isReading);
 		}
 
 		/* Checks if DAQ Stop resets isReading flag. */
@@ -393,9 +399,10 @@ namespace BiomedeMainseFMxtest
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStop = 0;
-			sensor->isReading = true;
+			sensor->DebuggingSetIsReading(true);
 			sensor->DAQStop();
-			Assert::AreEqual(false, sensor->isReading);
+			bool isReading = sensor->DebuggingGetIsReading();
+			Assert::AreEqual(false, isReading);
 		}
 
 		/* Checks if DAQ Stop throws exception on error. */
@@ -405,9 +412,10 @@ namespace BiomedeMainseFMxtest
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStop = 1234;
-			sensor->isReading = true;
+			sensor->DebuggingSetIsReading(true);
 			sensor->DAQStop();
-			Assert::AreEqual(false, sensor->isReading);
+			bool isReading = sensor->DebuggingGetIsReading();
+			Assert::AreEqual(false, isReading);
 		}
 
 		/* Checks if SetUserCalc forwards the parameters correctly and 
@@ -417,7 +425,7 @@ namespace BiomedeMainseFMxtest
 		{
 			error_SetUserCalc = 0;
 			eMains^ sensor = gcnew eMains(kennung.serial);
-			sensor->UserCalc = false;
+			sensor->DebuggingSetUserCalc(false);
 			sensor->SetUserCalc(true);
 			Assert::AreEqual<Byte>(1, on_off_SetUserCalc);
 			Assert::AreEqual(true, sensor->GetUserCalc());
@@ -430,7 +438,7 @@ namespace BiomedeMainseFMxtest
 		{
 			error_SetUserCalc = 123;
 			eMains^ sensor = gcnew eMains(kennung.serial);
-			sensor->UserCalc = true;
+			sensor->DebuggingSetUserCalc(true);
 			sensor->SetUserCalc(false);
 		}
 

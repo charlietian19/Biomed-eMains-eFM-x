@@ -9,6 +9,31 @@ using namespace System::Threading;
 using namespace System::Diagnostics;
 using namespace Biomed_eMains_eFMx;
 
+/* Setup mock DLL entry points. */
+void eMains::DebuggingSetupMockDLL(GET_NUMBER_OF_DEVICES GetNumberOfDevices,
+	GET_REVISION GetRevision, GET_AVAILABLE_SERIAL_NUMBERS GetAvailableSerialNumbers,
+	IS_DEVICE_CONNECTED IsDeviceConnected, READ_KENNUNG ReadKennung,
+	DAQ_INITIALIZE DAQInitialize, DAQ_START DAQStart, DAQ_STOP DAQStop,
+	DAQ_READDATA DAQReadData, SHOW_ERROR_INFORMATION ShowErrorInformation,
+	SET_CALLBACK SetCallback, SET_USER_CALC SetUserCalc, READ_SLOPES ReadSlopes,
+	READ_OFFSETS ReadOffsets)
+{
+	_GetNumberOfDevices = GetNumberOfDevices;
+	_GetRevision = GetRevision;
+	_GetAvailableSerialNumbers = GetAvailableSerialNumbers;
+	_IsDeviceConnected = IsDeviceConnected;
+	_ReadKennung = ReadKennung;
+	_DAQInitialize = DAQInitialize;
+	_DAQStart = DAQStart;
+	_DAQStop = DAQStop;
+	_DAQReadData = DAQReadData;
+	_ShowErrorInformation = ShowErrorInformation;
+	_SetCallback = SetCallback;
+	_SetUserCalc = SetUserCalc;
+	_ReadSlopes = ReadSlopes;
+	_ReadOffsets = ReadOffsets;
+}
+
 void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *values, DWORD datalength, BYTE packetCounter) {
 	static __int64 systemTicks = 0;
 
@@ -29,6 +54,32 @@ void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *va
 		}
 		eMains::InvokeDataHandler(serial, dataX, dataY, dataZ, systemSeconds, time, datalength);
 	}
+}
+
+
+void eMains::DebuggingSetConvertToMicrotesla(bool flag)
+{
+	convertToMicroTesla = flag;
+}
+
+void eMains::DebuggingSetIsReading(bool flag)
+{
+	isReading = flag;
+}
+
+void eMains::DebuggingSetUserCalc(bool flag)
+{
+	UserCalc = flag;
+}
+
+bool eMains::DebuggingGetIsReading()
+{
+	return isReading;
+}
+
+bool eMains::DebuggingGetConvertToMicrotesla()
+{
+	return convertToMicroTesla;
 }
 
 void eMains::InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,

@@ -1,9 +1,9 @@
 // Biomed-eMains-eFM-x.h
 
 #pragma once
+#include "stdafx.h"
 #include <windows.h>
 #define USE_CALLBACK
-// #define BUILD_WITH_TESTS
 
 using namespace System;
 using namespace System::Threading;
@@ -12,7 +12,7 @@ using namespace System;
 
 namespace Biomed_eMains_eFMx {
 	/* Selectable DAC range constants. */
-	enum Range
+	public enum Range
 	{
 		NEG_10_TO_PLUS_10V = 0,
 		ZERO_TO_PLUS_10V = 1,
@@ -21,7 +21,7 @@ namespace Biomed_eMains_eFMx {
 	};
 
 	/* Struct filled out by ReadKenung. */
-	struct kennung {
+	public struct kennung {
 		char deviceType[4];
 		__int16 serial;
 		char flag1;
@@ -107,12 +107,32 @@ namespace Biomed_eMains_eFMx {
 		/* Event handler for the arriving data. */
 		event DataProcessingFunc^ NewDataHandler;
 
-		/* Expose the fields so the test can stub out the DLL calls. */
-#ifdef BUILD_WITH_TESTS
-	public:
-#else
+		/* Functions to facilitate unit testing. */
+		/* Setup mock DLL entry points. */
+		static void DebuggingSetupMockDLL(GET_NUMBER_OF_DEVICES GetNumberOfDevices,
+			GET_REVISION GetRevision, GET_AVAILABLE_SERIAL_NUMBERS GetAvailableSerialNumber,
+			IS_DEVICE_CONNECTED IsDeviceConnected, READ_KENNUNG ReadKennung,
+			DAQ_INITIALIZE DAQInitialize, DAQ_START DAQStart, DAQ_STOP DAQStop,
+			DAQ_READDATA DAQReadData, SHOW_ERROR_INFORMATION ShowErrorInformation,
+			SET_CALLBACK SetCallback, SET_USER_CALC SetUserCalc, READ_SLOPES ReadSlopes,
+			READ_OFFSETS ReadOffsets);
+
+		/* Sets convertToMicrotesla flag. This method is for unit testing only. */
+		void DebuggingSetConvertToMicrotesla(bool flag);
+		
+		/* Sets isReading flag. This method is for unit testing only. */
+		void DebuggingSetIsReading(bool flag);
+
+		/* Sets UserCalc flag. This method is for unit testing only. */
+		void DebuggingSetUserCalc(bool flag);
+
+		/* Returns isReading flag. This method is for unit testing only. */
+		bool DebuggingGetIsReading();
+
+		/* Returns convertToMicrotesla flag. This method is for unit testing only. */
+		bool DebuggingGetConvertToMicrotesla();
+
 	private:
-#endif
 		/* Keeps tracks of the active eMains objects to dispatch the data to them. */
 		static Dictionary<DWORD, eMains^>^ activeSensors = gcnew Dictionary<DWORD, eMains^>();
 
