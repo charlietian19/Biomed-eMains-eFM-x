@@ -169,6 +169,11 @@
   <ItemGroup>
     <None Include="eFM-x API.dll" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="eFM-x API.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

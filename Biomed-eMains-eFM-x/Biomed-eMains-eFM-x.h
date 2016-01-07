@@ -3,7 +3,7 @@
 #pragma once
 #include <windows.h>
 #define USE_CALLBACK
-#define BUILD_WITH_TESTS
+// #define BUILD_WITH_TESTS
 
 using namespace System;
 using namespace System::Threading;
