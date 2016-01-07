@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Biomed-eMains-eFM-x.h"
+#include "eMainsException.h"
 #include <tchar.h>
 
 using namespace System;
