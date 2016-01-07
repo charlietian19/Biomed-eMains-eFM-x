@@ -58,7 +58,7 @@ namespace Biomed_eMains_eFMx {
 
 		/* Locates and loads eFM-x API.dll. Must be called before any instances can be constructed.
 		Should only be called once. */
-		static int LoadDLL();
+		static void LoadDLL();
 
 		/* Returns an array of available magnetometer serials, or an empty array if none are available. */
 		static List<int>^ GetAvailableSerials();
@@ -73,24 +73,24 @@ namespace Biomed_eMains_eFMx {
 			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples);
 		
 		/* Initializes the DAQ SamplingRate and chop&clamp parameters. */
-		int DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);
+		void DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);
 
 		/* Starts the data acquisition. 
 		If compiled with polling option, creates a new thread that will call processingFunction 
 		each time non-zero number of samples arrives. If compiled with callback option, registers
 		a callback with the DLL that calls processingFunction each time the data arrives.
 		convertToMicrotesla - if True, the returned values are in uT, otherwise it's DAC voltage. */
-		int DAQStart(bool convertToMicroTesla);
+		void DAQStart(bool convertToMicroTesla);
 
 		/* Stops the data acquisition.*/
-		int DAQStop();
+		void DAQStop();
 
 		/* Displays a message box explaining the error code. This call is NOT thread safe. */
 		static void ShowErrorInformation(int error);
 
 		/* Sets whether the device sends the data in DAC voltage units, or in magnetic field units
 		(according to the internal calibration data) */
-		int SetUserCalc(bool convert);
+		void SetUserCalc(bool convert);
 
 		/* Returns whether the device sends the data in DAC voltage units, or in magnetic field units	*/
 		bool GetUserCalc();
@@ -139,13 +139,13 @@ namespace Biomed_eMains_eFMx {
 		String^ type;
 
 		/* Reads out X, Y, Z slopes from the calibration data and saves them in the object. */
-		int InitializeSlopes();
+		void InitializeSlopes();
 
 		/* Reads out X, Y, Z offsets from the calibration data and saves them in the object. */
-		int InitializeOffsets();
+		void InitializeOffsets();
 
 		/* Reads out the device information and saves it in the object. */
-		int InitializeStatus();
+		void InitializeStatus();
 
 		/* Polls the data from the sensor (backup solution if callbacks are still not ready when
 		the delivery is scheduled). Timestamps the data, splits it in three channels and calls

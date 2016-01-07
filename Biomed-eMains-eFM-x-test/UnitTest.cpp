@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "../Biomed-eMains-eFM-x/Biomed-eMains-eFM-x.h"
+#include "../Biomed-eMains-eFM-x/eMainsException.h"
 
 using namespace System;
 using namespace System::Threading;
@@ -40,6 +41,15 @@ namespace BiomedeMainseFMxtest
 	int sensor2_calls;
 	int sensor3_calls;
 
+	/* GetNumberOfDevices return value. */
+	int error_GetNumberOfDevices;
+
+	int error_ReadSlopes;
+	int error_ReadOffsets;
+	int error_GetAvailableSerials;
+	int error_ReadKennung;
+	int error_GetRevision;
+
 	/* Stubs for eFM-x API.dll functions. */
 	DWORD __cdecl ReadSlopesStub(DWORD __in serial, double __out *values)
 	{
@@ -47,7 +57,7 @@ namespace BiomedeMainseFMxtest
 		{
 			values[i] = slope;
 		}
-		return 0;
+		return error_ReadSlopes;
 	}
 
 	DWORD __cdecl ReadOffsetsStub(DWORD __in serial, double __out *values)
@@ -56,7 +66,7 @@ namespace BiomedeMainseFMxtest
 		{
 			values[i] = offset;
 		}
-		return 0;
+		return error_ReadOffsets;
 	}
 
 	DWORD __cdecl GetAvailableSerialsStub(DWORD* __out buf, __in DWORD len)
@@ -65,25 +75,25 @@ namespace BiomedeMainseFMxtest
 		{
 			buf[i] = serialMult * i;
 		}
-		return 0;
+		return error_GetAvailableSerials;
 	};
 
 	DWORD __cdecl GetNumberOfDevicesStub(DWORD* __out num)
 	{
 		*num = deviceNumber;
-		return 0;
+		return error_GetNumberOfDevices;
 	}
 
 	DWORD __cdecl ReadKennungStub(DWORD __in serial, BYTE* __out data)
 	{
 		_memccpy(data, &kennung, 1, sizeof(struct kennung));
-		return 0;
+		return error_ReadKennung;
 	}
 
 	DWORD __cdecl GetRevisionStub(DWORD __in serial, BYTE* __out rev)
 	{
 		*rev = revision;
-		return 0;
+		return error_GetRevision;
 	}
 
 	DWORD __cdecl DAQInitializeStub(DWORD __in serial, double* __in SamplingRate,
@@ -202,7 +212,7 @@ namespace BiomedeMainseFMxtest
 			deviceNumber = 3;
 			revision = 66;
 
-			/* Reset the spies. */
+			/* Reset the "spies". */
 			SamplingRate_DAQinit = 0.0;
 			MeasurementRange_DAQinit = 0;
 			chop_DAQinit = 0;
@@ -215,6 +225,12 @@ namespace BiomedeMainseFMxtest
 			sensor1_calls = 0;
 			sensor2_calls = 0;
 			sensor3_calls = 0;
+			error_GetNumberOfDevices = 0;
+			error_ReadSlopes = 0;
+			error_ReadOffsets = 0;
+			error_GetAvailableSerials = 0;
+			error_ReadKennung = 0;
+			error_GetRevision = 0;
 		};
 
 		[TestCleanup()]
@@ -250,8 +266,9 @@ namespace BiomedeMainseFMxtest
 
 		/* Checks if the list of devices is retrieved correctly. */
 		[TestMethod]
-		void GetDeviceList()
+		void GetDeviceListSuccess()
 		{
+			error_GetNumberOfDevices = 0;
 			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
 			eMains::_GetNumberOfDevices = GetNumberOfDevicesStub;
 
@@ -263,28 +280,48 @@ namespace BiomedeMainseFMxtest
 			}
 		};
 
+		/* Checks if the device initialization throws exception if error happens. */
+		[TestMethod]
+		[ExpectedException(typeof(eMainsException)]
+		void GetDeviceListError()
+		{
+			error_GetNumberOfDevices = 5234;
+			eMains::_GetAvailableSerialNumbers = GetAvailableSerialsStub;
+			eMains::_GetNumberOfDevices = GetNumberOfDevicesStub;
+			List<int>^ serials = eMains::GetAvailableSerials();
+		};
+
 		/* Checks if DAQ Initialize arguments are forwarded correctly. */
 		[TestMethod]
-		void DAQInitialize()
+		void DAQInitializeSuccess()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
-			error_DAQinit = 123;
-			int error = sensor->DAQInitialize(1000.0, ZERO_TO_PLUS_5V, 0, 1);
+			error_DAQinit = 0;
+			sensor->DAQInitialize(1000.0, ZERO_TO_PLUS_5V, 0, 1);
 			Assert::AreEqual(3000.0, SamplingRate_DAQinit);
 			Assert::AreEqual(Convert::ToInt32(ZERO_TO_PLUS_5V), MeasurementRange_DAQinit);
 			Assert::AreEqual(1, clamp_DAQinit);
 			Assert::AreEqual(0, chop_DAQinit);
-			Assert::AreEqual(123, error);
+		}
+
+		/* Checks if DAQ Initialize throws exception. */
+		[TestMethod]
+		[ExpectedException(typeof(eMainsException)]
+		void DAQInitializeError()
+		{
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQinit = 123;
+			sensor->DAQInitialize(1000.0, ZERO_TO_PLUS_5V, 0, 1);
 		}
 
 		/* Checks if DAQ Start arguments are forwarded and object flags are updated correctly. */
 		[TestMethod]
+		[ExpectedException(typeof(eMainsException)]
 		void DAQStartError()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 12454;
-			int error = sensor->DAQStart(false);
-			Assert::AreEqual(12454, error);
+			sensor->DAQStart(false);
 			Assert::AreEqual(false, sensor->convertToMicroTesla);
 			Assert::AreEqual(false, sensor->isReading);
 		};
@@ -294,8 +331,7 @@ namespace BiomedeMainseFMxtest
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 0;
-			int error = sensor->DAQStart(true);
-			Assert::AreEqual(0, error);
+			sensor->DAQStart(true);
 			Assert::AreEqual(true, sensor->convertToMicroTesla);
 			Assert::AreEqual(true, sensor->isReading);
 		}
@@ -305,25 +341,37 @@ namespace BiomedeMainseFMxtest
 		void DAQStopNotReading()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
-			error_DAQStop = 123;
+			error_DAQStop = 123; // DLL function should NOT be called
 			sensor->isReading = false;
-			int error = sensor->DAQStop();
-			Assert::AreEqual(0, error);
+			sensor->DAQStop();
 			Assert::AreEqual(false, sensor->isReading);
 		}
 
+		/* Checks if DAQ Stop resets isReading flag. */
 		[TestMethod]
 		void DAQStopWhileReading()
 		{
 			eMains^ sensor = gcnew eMains(kennung.serial);
-			error_DAQStop = 123;
+			error_DAQStop = 0;
 			sensor->isReading = true;
-			int error = sensor->DAQStop();
-			Assert::AreEqual(123, error);
+			sensor->DAQStop();
 			Assert::AreEqual(false, sensor->isReading);
 		}
 
-		/* Checks if SetUserCalc forwards the parameters correctly and updates the instance state. */
+		/* Checks if DAQ Stop throws exception on error. */
+		[TestMethod]
+		[ExpectedException(typeof(eMainsException)]
+		void DAQStopError()
+		{
+			eMains^ sensor = gcnew eMains(kennung.serial);
+			error_DAQStop = 1234;
+			sensor->isReading = true;
+			sensor->DAQStop();
+			Assert::AreEqual(false, sensor->isReading);
+		}
+
+		/* Checks if SetUserCalc forwards the parameters correctly and 
+		updates the instance state. */
 		[TestMethod]
 		void SetUserCalcSuccess()
 		{
@@ -335,15 +383,15 @@ namespace BiomedeMainseFMxtest
 			Assert::AreEqual(true, sensor->GetUserCalc());
 		}
 
+		/* Checks if SetUserCalc throws the exception on error. */
 		[TestMethod]
+		[ExpectedException(typeof(eMainsException)]
 		void SetUserCalcError()
 		{
 			error_SetUserCalc = 123;
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			sensor->UserCalc = true;
 			sensor->SetUserCalc(false);
-			Assert::AreEqual<Byte>(0, on_off_SetUserCalc);
-			Assert::AreEqual(true, sensor->GetUserCalc());
 		}
 
 #ifdef USE_CALLBACK

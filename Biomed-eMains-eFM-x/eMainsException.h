@@ -3,14 +3,15 @@
 ref class eMainsException : Exception
 {
 public:
-	eMainsException();
+	eMainsException(int error);
+	eMainsException(int error, String^ msg);
 	eMainsException(String^ msg);
 };
 
 ref class eMainsTimeoutException : eMainsException
 {
 public:
-	eMainsTimeoutException();
-	eMainsTimeoutException(String^ msg);
+	eMainsTimeoutException(int error);
+	eMainsTimeoutException(int error, String^ msg);
 };
 

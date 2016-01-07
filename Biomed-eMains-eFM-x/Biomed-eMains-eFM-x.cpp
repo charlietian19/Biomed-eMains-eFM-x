@@ -78,7 +78,7 @@ eMains::eMains(int serial)
 	InitializeStatus();
 }
 
-int Biomed_eMains_eFMx::eMains::InitializeSlopes()
+void Biomed_eMains_eFMx::eMains::InitializeSlopes()
 {
 	double values[3];
 	DLLMutex->WaitOne();
@@ -90,10 +90,13 @@ int Biomed_eMains_eFMx::eMains::InitializeSlopes()
 		SlopeY = values[1];
 		SlopeZ = values[2];
 	}
-	return error;
+	else
+	{
+		throw gcnew eMainsException(error, "Can't read the calibration slope");
+	}
 }
 
-int Biomed_eMains_eFMx::eMains::InitializeOffsets()
+void Biomed_eMains_eFMx::eMains::InitializeOffsets()
 {
 	double values[3];
 	DLLMutex->WaitOne();
@@ -105,10 +108,13 @@ int Biomed_eMains_eFMx::eMains::InitializeOffsets()
 		OffsetY = values[1];
 		OffsetZ = values[2];
 	}
-	return error;
+	else
+	{
+		throw gcnew eMainsException(error, "Can't read the calibration offset");
+	}
 }
 
-int Biomed_eMains_eFMx::eMains::InitializeStatus()
+void Biomed_eMains_eFMx::eMains::InitializeStatus()
 {
 	struct kennung kennung;
 	DLLMutex->WaitOne();
@@ -122,7 +128,7 @@ int Biomed_eMains_eFMx::eMains::InitializeStatus()
 	}
 	else
 	{
-		return error;
+		throw gcnew eMainsException(error, "Can't read kennung");
 	}
 
 	BYTE revision;
@@ -133,14 +139,18 @@ int Biomed_eMains_eFMx::eMains::InitializeStatus()
 	{
 		Revision = revision;
 	}
-	return error;
+	else
+	{
+		throw gcnew eMainsException(error, "Can't read ADC revision");
+	}
 }
 
-int eMains::LoadDLL()
+void eMains::LoadDLL()
 {
+	String^ name = "eFM-x API.dll";
 	eMainsDLL = LoadLibrary(_T("eFM-x API.dll"));
 	if (!eMainsDLL) {
-		return -1;
+		throw gcnew eMainsException("Can't find " + name);
 	}
 
 	_GetNumberOfDevices =
@@ -159,34 +169,35 @@ int eMains::LoadDLL()
 	_ReadOffsets = (READ_OFFSETS)GetProcAddress(eMainsDLL, "ReadOffsets");
 	_SetUserCalc = (SET_USER_CALC)GetProcAddress(eMainsDLL, "SetUserCalc");
 
-	if (!(_GetNumberOfDevices && _GetRevision && _GetAvailableSerialNumbers && _IsDeviceConnected &&
-		_ReadKennung && _DAQInitialize && _DAQStart && _DAQStop && _DAQReadData &&
-		_ShowErrorInformation && _ReadSlopes && _ReadOffsets && _SetUserCalc))
+	if (!(_GetNumberOfDevices && _GetRevision && _GetAvailableSerialNumbers 
+		&& _IsDeviceConnected && _ReadKennung && _DAQInitialize && _DAQStart 
+		&& _DAQStop && _DAQReadData && _ShowErrorInformation && _ReadSlopes 
+		&& _ReadOffsets && _SetUserCalc))
 	{
-		return -1;
+		throw gcnew eMainsException("Can't find all necessery entry points in " 
+			+ name);
 	}
 
 #ifdef USE_CALLBACK
 	_SetCallback = (SET_CALLBACK)GetProcAddress(eMainsDLL, "SetCallBack");
 	if (!_SetCallback)
 	{
-		return -1;
+		throw gcnew eMainsException("Can't find SetCallBack entry point in " 
+			+ name);
 	}
 #endif // USE_CALLBACK
-
-	return 0;
 }
 
 List<int>^ eMains::GetAvailableSerials()
 {
 	DWORD numberOfDevices = 0;
-	array<Int32>^ serials = gcnew array<Int32>(0);
+	array<Int32>^ serials;
 	DLLMutex->WaitOne();
 	int error = _GetNumberOfDevices(&numberOfDevices);
 	DLLMutex->ReleaseMutex();
 	if (error)
 	{
-		return gcnew List<int>();
+		throw gcnew eMainsException(error, "Can't retrieve the sensor list");
 	}
 
 	DWORD *buf = (DWORD *)malloc(numberOfDevices * sizeof(DWORD));
@@ -195,26 +206,34 @@ List<int>^ eMains::GetAvailableSerials()
 	DLLMutex->ReleaseMutex();
 	if (!error && (numberOfDevices != 0)) {
 		serials = gcnew array<Int32>(numberOfDevices);
-		Runtime::InteropServices::Marshal::Copy(IntPtr((void *)buf), serials, 0, numberOfDevices);
+		Runtime::InteropServices::Marshal::Copy(IntPtr((void *)buf), serials, 
+			0, numberOfDevices);
 	}
 
 	free(buf);
 	return gcnew List<int>(serials);
 }
 
-int eMains::DAQInitialize(double samplingRate, Range measurementRange, int chop, int clamp)
+void eMains::DAQInitialize(double samplingRate, Range measurementRange, 
+	int chop, int clamp)
 {
 	samplingRate *= 3;
 	DLLMutex->WaitOne();
-	int error = _DAQInitialize(this->serial, &samplingRate, measurementRange, chop, clamp);
+	int error = _DAQInitialize(this->serial, &samplingRate, measurementRange, 
+		chop, clamp);
 	DLLMutex->ReleaseMutex();
-	return error;
+	if (error)
+	{
+		throw gcnew eMainsException(error, "Can't initialize DAQ");
+	}
 }
 
-int eMains::DAQStart(bool convertToMicroTesla)
+void eMains::DAQStart(bool convertToMicroTesla)
 {
 	if (this->isReading)
-		return 0;
+	{
+		return;
+	}
 
 	this->convertToMicroTesla = convertToMicroTesla;
 
@@ -222,41 +241,47 @@ int eMains::DAQStart(bool convertToMicroTesla)
 #ifdef USE_CALLBACK
 	_SetCallback(this->serial, &SensorCallbackFunction, 0);
 #endif // USE_CALLBACK
-	int res = _DAQStart();
+	int error = _DAQStart();
 	DLLMutex->ReleaseMutex();
-	if (res)
+	if (error)
 	{
-		return res;
+		throw gcnew eMainsException(error, "Can't start data acquisition");
 	}
 
 	this->isReading = true;
 
 #ifndef USE_CALLBACK
-	Thread^ bgPollingFunction = gcnew Thread(gcnew ThreadStart(this, &eMains::SensorPollingFunction));
+	Thread^ bgPollingFunction = gcnew Thread(gcnew ThreadStart(this, 
+		&eMains::SensorPollingFunction));
 	bgPollingFunction->Start();
 #endif // USE_CALLBACK
-
-	return res;
 }
 
-int eMains::DAQStop()
+void eMains::DAQStop()
 {
 	if (!this->isReading)
-		return 0;
+	{
+		return;
+	}
 
 	this->isReading = false;
 	DLLMutex->WaitOne();
 	int error = _DAQStop();
 	DLLMutex->ReleaseMutex();
-	return error;
+
+	if (error)
+	{
+		throw gcnew eMainsException(error, "Can't stop data acquisition");
+	}
 }
 
 void eMains::ShowErrorInformation(int error)
 {
-	_ShowErrorInformation(error, 0); // There is deliberately no lock around this line
+	// There is deliberately no lock around this line
+	_ShowErrorInformation(error, 0); 
 }
 
-int Biomed_eMains_eFMx::eMains::SetUserCalc(bool convert)
+void Biomed_eMains_eFMx::eMains::SetUserCalc(bool convert)
 {
 	DLLMutex->WaitOne();
 	int error = _SetUserCalc(this->serial, convert);
@@ -265,7 +290,10 @@ int Biomed_eMains_eFMx::eMains::SetUserCalc(bool convert)
 	{
 		UserCalc = convert;
 	}
-	return error;
+	else
+	{
+		throw gcnew eMainsException(error, "Can't SetUserCalc");
+	}
 }
 
 bool Biomed_eMains_eFMx::eMains::GetUserCalc()
@@ -299,7 +327,8 @@ void eMains::SensorPollingFunction() {
 	double *buf = (double*)malloc(DATA_BUFFER_LENGTH * sizeof(double));
 	while (this->isReading) {
 		DLLMutex->WaitOne();
-		int error = _DAQReadData(this->serial, buf, DATA_BUFFER_LENGTH, &dataCount, POLLING_TIMEOUT_MS);
+		int error = _DAQReadData(this->serial, buf, DATA_BUFFER_LENGTH, 
+			&dataCount, POLLING_TIMEOUT_MS);
 		DLLMutex->ReleaseMutex();
 		systemTicks = Stopwatch::GetTimestamp();
 		DateTime time = DateTime::Now;
@@ -307,6 +336,8 @@ void eMains::SensorPollingFunction() {
 		if (error)
 		{
 			DAQStop();
+			throw gcnew eMainsException(error, 
+				"DAQReadData returned error while polling the sensor");
 		}
 		else
 		{
@@ -323,7 +354,8 @@ void eMains::SensorPollingFunction() {
 					dataZ[i] = buf[i * 3 + 2];
 				}
 				ConvertDataUnits(dataX, dataY, dataZ);
-				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time, dataCount);
+				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time, 
+					dataCount);
 			}
 		}
 	}
