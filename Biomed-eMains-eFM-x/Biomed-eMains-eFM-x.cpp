@@ -89,7 +89,7 @@ void eMains::InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>
 	{
 		eMains^ sensor = activeSensors[serial];
 		sensor->ConvertDataUnits(dataX, dataY, dataZ);
-		sensor->NewDataHandler(dataX, dataY, dataZ, microsecondsSinceLastData, time, samples);
+		sensor->NewDataHandler(dataX, dataY, dataZ, microsecondsSinceLastData, time);
 	}
 }
 
@@ -423,8 +423,7 @@ void eMains::SensorPollingFunction() {
 					dataZ[i] = buf[i * 3 + 2];
 				}
 				ConvertDataUnits(dataX, dataY, dataZ);
-				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time, 
-					dataCount);
+				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time);
 			}
 		}
 	}

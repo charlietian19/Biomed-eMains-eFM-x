@@ -70,7 +70,7 @@ namespace Biomed_eMains_eFMx {
 
 		/* Describes a user function to be called when the data arrives. */
 		delegate void DataProcessingFunc(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime time, int samples);
+			array<double>^ dataZ, double systemSeconds, DateTime time);
 		
 		/* Initializes the DAQ SamplingRate and chop&clamp parameters. */
 		void DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);

@@ -146,19 +146,19 @@ namespace BiomedeMainseFMxtest
 		TestContext^ testContextInstance;
 		static Mutex^ stubLock; // the DLL stubs are not thread-safe
 		static void DataHandlerSensor1(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+			array<double>^ dataZ, double systemSeconds, DateTime time)
 		{
 			sensor1_calls += 1;
 		}
 
 		static void DataHandlerSensor2(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+			array<double>^ dataZ, double systemSeconds, DateTime time)
 		{
 			sensor2_calls += 1;
 		}
 
 		static void DataHandlerSensor3(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime^ time, int samples)
+			array<double>^ dataZ, double systemSeconds, DateTime time)
 		{
 			sensor3_calls += 1;
 		}
