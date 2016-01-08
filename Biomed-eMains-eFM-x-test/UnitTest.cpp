@@ -340,7 +340,7 @@ namespace BiomedeMainseFMxtest
 			error_DAQinit = 0;
 			sensor->DAQInitialize(1000.0, Range::ZERO_TO_PLUS_5V, 0, 1);
 			Assert::AreEqual(3000.0, SamplingRate_DAQinit);
-			Assert::AreEqual(2, MeasurementRange_DAQinit);
+			Assert::AreEqual(3, MeasurementRange_DAQinit);
 			Assert::AreEqual(1, clamp_DAQinit);
 			Assert::AreEqual(0, chop_DAQinit);
 		}
