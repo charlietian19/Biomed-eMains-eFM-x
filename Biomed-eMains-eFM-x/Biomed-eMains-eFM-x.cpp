@@ -83,7 +83,7 @@ bool eMains::DebuggingGetConvertToMicrotesla()
 }
 
 void eMains::InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,
-	array<double>^ dataZ, double microsecondsSinceLastData, DateTime ^ time, int samples)
+	array<double>^ dataZ, double microsecondsSinceLastData, DateTime time, int samples)
 {
 	if (activeSensors->ContainsKey(serial))
 	{
