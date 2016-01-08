@@ -126,11 +126,16 @@ namespace Biomed_eMains_eFMx {
 		/* Sets UserCalc flag. This method is for unit testing only. */
 		void DebuggingSetUserCalc(bool flag);
 
-		/* Returns isReading flag. This method is for unit testing only. */
-		bool DebuggingGetIsReading();
-
 		/* Returns convertToMicrotesla flag. This method is for unit testing only. */
 		bool DebuggingGetConvertToMicrotesla();
+
+		property bool Reading
+		{
+			bool get()
+			{
+				return isReading;
+			}
+		}
 
 	private:
 		/* Converts Range enum to an int. */

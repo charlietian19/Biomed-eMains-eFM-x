@@ -363,10 +363,9 @@ namespace BiomedeMainseFMxtest
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 12454;
 			sensor->DAQStart(false);
-			bool isReading = sensor->DebuggingGetIsReading();
 			bool convertToMicroTesla = sensor->DebuggingGetConvertToMicrotesla();
 			Assert::AreEqual(false, convertToMicroTesla);
-			Assert::AreEqual(false, isReading);
+			Assert::AreEqual(false, sensor->Reading);
 		};
 
 		[TestMethod]
@@ -375,10 +374,9 @@ namespace BiomedeMainseFMxtest
 			eMains^ sensor = gcnew eMains(kennung.serial);
 			error_DAQStart = 0;
 			sensor->DAQStart(true);
-			bool isReading = sensor->DebuggingGetIsReading();
 			bool convertToMicroTesla = sensor->DebuggingGetConvertToMicrotesla();
 			Assert::AreEqual(true, convertToMicroTesla);
-			Assert::AreEqual(true, isReading);
+			Assert::AreEqual(true, sensor->Reading);
 		}
 
 		/* Checks if DAQ Stop resets isReading flag. */
@@ -389,8 +387,7 @@ namespace BiomedeMainseFMxtest
 			error_DAQStop = 123; // DLL function should NOT be called
 			sensor->DebuggingSetIsReading(false);
 			sensor->DAQStop();
-			bool isReading = sensor->DebuggingGetIsReading();
-			Assert::AreEqual(false, isReading);
+			Assert::AreEqual(false, sensor->Reading);
 		}
 
 		/* Checks if DAQ Stop resets isReading flag. */
@@ -401,8 +398,7 @@ namespace BiomedeMainseFMxtest
 			error_DAQStop = 0;
 			sensor->DebuggingSetIsReading(true);
 			sensor->DAQStop();
-			bool isReading = sensor->DebuggingGetIsReading();
-			Assert::AreEqual(false, isReading);
+			Assert::AreEqual(false, sensor->Reading);
 		}
 
 		/* Checks if DAQ Stop throws exception on error. */
@@ -414,8 +410,7 @@ namespace BiomedeMainseFMxtest
 			error_DAQStop = 1234;
 			sensor->DebuggingSetIsReading(true);
 			sensor->DAQStop();
-			bool isReading = sensor->DebuggingGetIsReading();
-			Assert::AreEqual(false, isReading);
+			Assert::AreEqual(false, sensor->Reading);
 		}
 
 		/* Checks if SetUserCalc forwards the parameters correctly and 

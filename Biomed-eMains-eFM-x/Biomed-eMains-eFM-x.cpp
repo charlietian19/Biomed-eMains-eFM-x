@@ -72,11 +72,6 @@ void eMains::DebuggingSetUserCalc(bool flag)
 	UserCalc = flag;
 }
 
-bool eMains::DebuggingGetIsReading()
-{
-	return isReading;
-}
-
 bool eMains::DebuggingGetConvertToMicrotesla()
 {
 	return convertToMicroTesla;
@@ -255,11 +250,14 @@ List<int>^ eMains::GetAvailableSerials()
 	DLLMutex->WaitOne();
 	error = _GetAvailableSerialNumbers(buf, numberOfDevices);
 	DLLMutex->ReleaseMutex();
-	if (!error && (numberOfDevices != 0)) {
-		serials = gcnew array<Int32>(numberOfDevices);
-		Runtime::InteropServices::Marshal::Copy(IntPtr((void *)buf), serials, 
-			0, numberOfDevices);
+	if (error)
+	{
+		throw gcnew eMainsException(error, "Can't retrieve the sensor list");
 	}
+
+	serials = gcnew array<Int32>(numberOfDevices);
+	Runtime::InteropServices::Marshal::Copy(IntPtr((void *)buf), serials, 0, 
+		numberOfDevices);
 
 	free(buf);
 	return gcnew List<int>(serials);
