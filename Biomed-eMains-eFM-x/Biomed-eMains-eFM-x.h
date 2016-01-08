@@ -12,12 +12,12 @@ using namespace System;
 
 namespace Biomed_eMains_eFMx {
 	/* Selectable DAC range constants. */
-	public enum Range
+	public enum class Range
 	{
-		NEG_10_TO_PLUS_10V = 0,
-		ZERO_TO_PLUS_10V = 1,
-		NEG_5_TO_PLUS_5V = 2,
-		ZERO_TO_PLUS_5V = 3
+		NEG_10_TO_PLUS_10V,
+		ZERO_TO_PLUS_10V,
+		NEG_5_TO_PLUS_5V,
+		ZERO_TO_PLUS_5V
 	};
 
 	/* Struct filled out by ReadKenung. */
@@ -133,6 +133,9 @@ namespace Biomed_eMains_eFMx {
 		bool DebuggingGetConvertToMicrotesla();
 
 	private:
+		/* Converts Range enum to an int. */
+		int RangeToInt(Range range);
+
 		/* Keeps tracks of the active eMains objects to dispatch the data to them. */
 		static Dictionary<DWORD, eMains^>^ activeSensors = gcnew Dictionary<DWORD, eMains^>();
 

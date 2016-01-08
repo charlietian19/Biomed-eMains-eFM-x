@@ -265,12 +265,30 @@ List<int>^ eMains::GetAvailableSerials()
 	return gcnew List<int>(serials);
 }
 
+int eMains::RangeToInt(Range range)
+{
+	switch (range)
+	{
+	case Range::NEG_10_TO_PLUS_10V:
+		return 0;
+	case Range::ZERO_TO_PLUS_10V:
+		return 1;
+	case Range::NEG_5_TO_PLUS_5V:
+		return 2;
+	case Range::ZERO_TO_PLUS_5V:
+		return 3;
+	default:
+		return 0;
+	}
+}
+
 void eMains::DAQInitialize(double samplingRate, Range measurementRange, 
 	int chop, int clamp)
 {
+	int range = RangeToInt(measurementRange);
 	samplingRate *= 3;
 	DLLMutex->WaitOne();
-	int error = _DAQInitialize(this->serial, &samplingRate, measurementRange, 
+	int error = _DAQInitialize(this->serial, &samplingRate, range, 
 		chop, clamp);
 	DLLMutex->ReleaseMutex();
 	if (error)
