@@ -1,9 +1,8 @@
 // Biomed-eMains-eFM-x.h
 
 #pragma once
-#include "stdafx.h"
-#include <windows.h>
 #define USE_CALLBACK
+#include <windows.h>
 
 using namespace System;
 using namespace System::Threading;
