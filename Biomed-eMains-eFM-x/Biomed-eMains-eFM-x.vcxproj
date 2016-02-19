@@ -135,9 +135,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Reference Include="Biomed-eMains-eFM-x">
-      <HintPath>..\..\DogeStation2\Debug\Biomed-eMains-eFM-x.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
