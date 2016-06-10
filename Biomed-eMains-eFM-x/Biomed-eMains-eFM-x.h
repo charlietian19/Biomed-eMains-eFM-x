@@ -65,11 +65,11 @@ namespace Biomed_eMains_eFMx {
 		/* Invokes a data handler event if one is register. The purpose of this function is to dispatch the
 		received data to the corecct object. A native function has to invoke it so it's public. */
 		static void InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double microsecondsSinceLastData, DateTime time, int samples);
+			array<double>^ dataZ, __int64 ticks, DateTime time, int samples);
 
 		/* Describes a user function to be called when the data arrives. */
 		delegate void DataProcessingFunc(array<double>^ dataX, array<double>^ dataY,
-			array<double>^ dataZ, double systemSeconds, DateTime time);
+			array<double>^ dataZ, __int64 ticks, DateTime time);
 		
 		/* Initializes the DAQ SamplingRate and chop&clamp parameters. */
 		void DAQInitialize(double SamplingRate, Range MeasurementRange, int chop, int clamp);

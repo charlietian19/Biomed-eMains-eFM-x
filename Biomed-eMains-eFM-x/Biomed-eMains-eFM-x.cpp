@@ -43,7 +43,6 @@ void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *va
 
 	if (datalength)
 	{
-		double systemSeconds = 1.0 * systemTicks / Stopwatch::Frequency;
 		array<double>^ dataX = gcnew array<double>(datalength / 3);
 		array<double>^ dataY = gcnew array<double>(datalength / 3);
 		array<double>^ dataZ = gcnew array<double>(datalength / 3);
@@ -53,7 +52,7 @@ void __cdecl Biomed_eMains_eFMx::SensorCallbackFunction(DWORD serial, double *va
 			dataY[i] = values[i * 3 + 1];
 			dataZ[i] = values[i * 3 + 2];
 		}
-		eMains::InvokeDataHandler(serial, dataX, dataY, dataZ, systemSeconds, time, datalength);
+		eMains::InvokeDataHandler(serial, dataX, dataY, dataZ, systemTicks, time, datalength);
 	}
 }
 
@@ -79,13 +78,13 @@ bool eMains::DebuggingGetConvertToMicrotesla()
 }
 
 void eMains::InvokeDataHandler(DWORD serial, array<double>^ dataX, array<double>^ dataY,
-	array<double>^ dataZ, double microsecondsSinceLastData, DateTime time, int samples)
+	array<double>^ dataZ, __int64 ticks, DateTime time, int samples)
 {
 	if (activeSensors->ContainsKey(serial))
 	{
 		eMains^ sensor = activeSensors[serial];
 		sensor->ConvertDataUnits(dataX, dataY, dataZ);
-		sensor->NewDataHandler(dataX, dataY, dataZ, microsecondsSinceLastData, time);
+		sensor->NewDataHandler(dataX, dataY, dataZ, ticks, time);
 	}
 }
 
@@ -411,7 +410,6 @@ void eMains::SensorPollingFunction() {
 		{
 			if (dataCount)
 			{
-				double systemSeconds = 1.0 * systemTicks / Stopwatch::Frequency;
 				array<double>^ dataX = gcnew array<double>(dataCount / 3);
 				array<double>^ dataY = gcnew array<double>(dataCount / 3);
 				array<double>^ dataZ = gcnew array<double>(dataCount / 3);
@@ -422,7 +420,7 @@ void eMains::SensorPollingFunction() {
 					dataZ[i] = buf[i * 3 + 2];
 				}
 				ConvertDataUnits(dataX, dataY, dataZ);
-				NewDataHandler(dataX, dataY, dataZ, systemSeconds, time);
+				NewDataHandler(dataX, dataY, dataZ, systemTicks, time);
 			}
 		}
 	}
